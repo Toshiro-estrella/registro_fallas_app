@@ -28,7 +28,7 @@ def cargar_logo():
 image = cargar_logo()
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    st.image(image, use_container_width=True, caption="Industrias Niko")
+    st.image(image, caption="Industrias Niko")
 
 st.title("📋 Relevancias")
 
