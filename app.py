@@ -7,7 +7,6 @@ import os
 import io
 from dotenv import load_dotenv
 from google_utils import cargar_credenciales, subir_imagen_a_drive, guardar_datos_en_sheets
-from PIL import Image
 
 load_dotenv()
 
@@ -80,8 +79,8 @@ if enviado:
 
 # Historial de reportes diferido con caché
 @st.cache_data(ttl=60)
-def obtener_registros(sheet):
-    return sheet.get_all_records()[-200:]
+def obtener_registros(_sheet):
+    return _sheet.get_all_records()[-200:]
 
 st.markdown("---")
 with st.expander("📊 Historial de reportes"):
@@ -119,3 +118,4 @@ with st.expander("📊 Historial de reportes"):
                     st.info("No hay reportes registrados todavía.")
             except Exception as e:
                 st.error(f"Ocurrió un error al cargar el historial: {e}")
+
