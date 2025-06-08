@@ -58,13 +58,19 @@ if enviado:
             try:
                 # Subir imagen si se cargó una
                 url_imagen = None
-                if foto:
-                    image = Image.open(foto)
-                    image.thumbnail((800, 800))  # Reducción de resolución
-                    buffer = io.BytesIO()
-                    image.save(buffer, format="JPEG", quality=85)  # Comprimir
-                    buffer.seek(0)
-                    url_imagen = subir_imagen_a_drive(creds, buffer)
+if foto:
+    image = Image.open(foto)
+    image.thumbnail((800, 800))  # Reducción de resolución
+
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=85)  # Comprimir imagen
+    buffer.seek(0)
+
+    # ⚠️ Añadir nombre al buffer para que funcione con Google Drive API
+    buffer.name = foto.name
+
+    url_imagen = subir_imagen_a_drive(creds, buffer)
+
 
                 fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 datos = [fecha_hora, operario, maquina, producto, orden, descripcion, url_imagen or ""]
