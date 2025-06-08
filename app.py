@@ -10,15 +10,14 @@ from google_utils import cargar_credenciales, subir_imagen_a_drive, guardar_dato
 
 load_dotenv()
 
-# Cargar y cachear credenciales y hoja
-@st.cache_resource
-def obtener_sheet():
+# Cargar credenciales una sola vez
+try:
     creds = cargar_credenciales()
     gc = gspread.authorize(creds)
     sheet = gc.open_by_key(os.getenv("SHEET_ID")).sheet1
-    return sheet, creds
-
-sheet, creds = obtener_sheet()
+except Exception as e:
+    st.error(f"Error al cargar credenciales: {e}")
+    st.stop()
 
 # Logo cacheado
 @st.cache_resource
@@ -58,19 +57,8 @@ if enviado:
             try:
                 # Subir imagen si se cargó una
                 url_imagen = None
-if foto:
-    image = Image.open(foto)
-    image.thumbnail((800, 800))  # Reducción de resolución
-
-    buffer = io.BytesIO()
-    image.save(buffer, format="JPEG", quality=85)  # Comprimir imagen
-    buffer.seek(0)
-
-    # ⚠️ Añadir nombre al buffer para que funcione con Google Drive API
-    buffer.name = foto.name
-
-    url_imagen = subir_imagen_a_drive(creds, buffer)
-
+                if foto:
+                    url_imagen = subir_imagen_a_drive(creds, foto)
 
                 fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 datos = [fecha_hora, operario, maquina, producto, orden, descripcion, url_imagen or ""]
@@ -83,17 +71,13 @@ if foto:
             except Exception as e:
                 st.error(f"Ocurrió un error: {e}")
 
-# Historial de reportes diferido con caché
-@st.cache_data(ttl=60)
-def obtener_registros(_sheet):
-    return _sheet.get_all_records()[-200:]
-
+# Historial de reportes diferido
 st.markdown("---")
 with st.expander("📊 Historial de reportes"):
     if st.checkbox("Mostrar historial"):
         with st.spinner("Cargando historial..."):
             try:
-                registros = obtener_registros(sheet)
+                registros = sheet.get_all_records()[-200:]  # Últimos 200 registros
                 if registros:
                     df = pd.DataFrame(registros)
                     col1, col2 = st.columns(2)
