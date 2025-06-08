@@ -7,17 +7,19 @@ import os
 import io
 from dotenv import load_dotenv
 from google_utils import cargar_credenciales, subir_imagen_a_drive, guardar_datos_en_sheets
+from PIL import Image
 
 load_dotenv()
 
-# Cargar credenciales una sola vez
-try:
+# Cargar y cachear credenciales y hoja
+@st.cache_resource
+def obtener_sheet():
     creds = cargar_credenciales()
     gc = gspread.authorize(creds)
     sheet = gc.open_by_key(os.getenv("SHEET_ID")).sheet1
-except Exception as e:
-    st.error(f"Error al cargar credenciales: {e}")
-    st.stop()
+    return sheet, creds
+
+sheet, creds = obtener_sheet()
 
 # Logo cacheado
 @st.cache_resource
@@ -58,7 +60,12 @@ if enviado:
                 # Subir imagen si se cargó una
                 url_imagen = None
                 if foto:
-                    url_imagen = subir_imagen_a_drive(creds, foto)
+                    image = Image.open(foto)
+                    image.thumbnail((800, 800))  # Reducción de resolución
+                    buffer = io.BytesIO()
+                    image.save(buffer, format="JPEG", quality=85)  # Comprimir
+                    buffer.seek(0)
+                    url_imagen = subir_imagen_a_drive(creds, buffer)
 
                 fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 datos = [fecha_hora, operario, maquina, producto, orden, descripcion, url_imagen or ""]
@@ -71,13 +78,17 @@ if enviado:
             except Exception as e:
                 st.error(f"Ocurrió un error: {e}")
 
-# Historial de reportes diferido
+# Historial de reportes diferido con caché
+@st.cache_data(ttl=60)
+def obtener_registros(sheet):
+    return sheet.get_all_records()[-200:]
+
 st.markdown("---")
 with st.expander("📊 Historial de reportes"):
     if st.checkbox("Mostrar historial"):
         with st.spinner("Cargando historial..."):
             try:
-                registros = sheet.get_all_records()[-200:]  # Últimos 200 registros
+                registros = obtener_registros(sheet)
                 if registros:
                     df = pd.DataFrame(registros)
                     col1, col2 = st.columns(2)
@@ -108,9 +119,3 @@ with st.expander("📊 Historial de reportes"):
                     st.info("No hay reportes registrados todavía.")
             except Exception as e:
                 st.error(f"Ocurrió un error al cargar el historial: {e}")
-
-
-
-
-
-
